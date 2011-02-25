@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" creationComplete="init()">
+    <mx:UIComponent id="viewer_container" width="100%" height="100%"/>
+    <mx:Button label="Connect to the Kinect" click="socketConnect();" width="200" y="0"/>
+    <mx:Script> 
+        
+    <![CDATA[
+        import com.earthmine.controls.*;
+        import com.earthmine.viewer.*;
+        
+        import flash.net.Socket;
+        
+        import flash_kinect.MovingAverage;
+        
+        //  declare the necessary vars
+        public var viewer	:Viewer;
+        public var compass:CompassControl;
+        public var socket:Socket;
+        public var _prevX:Number = 0.0;
+        public var _prevY:Number = 0.0;
+        public var _prevZ:Number = 0.0;
+        
+        public var _xCalibAvg:MovingAverage;
+        public var _yCalibAvg:MovingAverage;
+        
+        public var _xAvg:MovingAverage;
+        public var _yAvg:MovingAverage;
+        public var _zAvg:MovingAverage;
+        
+        public  function init():void
+        {
+	        // to hit a custom server directly
+	        var serviceObj:Object = new Object();    
+	        serviceObj.serviceUrl = "http://192.168.1.59:11114/service";
+	        serviceObj.timeUrl = "http://192.168.1.59:11114/service";
+	        serviceObj.baseDataUrl = "http://s3.earthmine.com/tile";
+	        serviceObj.useHashedUrl = true;  //tiles on mappy's static file server are hashed
+	        
+	        // the earthmine viewer
+	        viewer = new Viewer();
+	        //viewer = new Viewer(null, serviceObj);
+	        viewer.addEventListener(ViewerEvent.VIEWER_READY, onPanoViewerReady);
+	        viewer.addEventListener(ViewerMouseEvent.DOUBLE_CLICK, onViewerDoubleClick);
+	        viewer.options = new ViewerOptions({cursorDisabled:false});
+	        
+	        // instantiate the compass
+	        compass = new CompassControl();
+	        
+	        // set your keys here!
+	        viewer.apiKey = "v2rn7hd7kabwqrubdh3ap64n";
+	        viewer.secretKey = "AMZeCvK9EB";
+	        
+	        //  Add the viewer object to the flex container.
+	        viewer_container.addChild(viewer);
+	        viewer_container.addEventListener(Event.RESIZE, onResize);
+	       
+            //_xCalibAvg = new MovingAverage(150);
+            //_yCalibAvg = new MovingAverage(150);
+
+            // window size...
+            _xAvg = new MovingAverage(25);
+            _yAvg = new MovingAverage(25);
+            _zAvg = new MovingAverage(25);
+        }
+        private function socketConnect():void
+        {
+            socket = new Socket("127.0.0.1", 8124);
+            socket.addEventListener(Event.CONNECT, onSocketConnect);
+            socket.addEventListener(Event.CLOSE, onSocketClose);
+            socket.addEventListener(IOErrorEvent.IO_ERROR, onSocketError);
+            socket.addEventListener(ProgressEvent.SOCKET_DATA,onSocketResponse);
+        }
+        private function onSocketResponse(event:ProgressEvent): void
+        {
+            var str:String = socket.readUTFBytes(socket.bytesAvailable);
+            parseData(str);
+        }
+        private function parseData(data:String):void
+        {
+            //trace(data);
+            var arr:Array = data.split(','); 
+            if(arr.length > 2)
+            {
+                //trace("[flash] x: "+arr[0] +" y: "+arr[1] +" z: "+arr[2]); 
+                var x:Number = Number(arr[0]); 
+                var y:Number = Number(arr[1]); 
+                var z:Number = Number(arr[2]);
+               
+                var xDelta:Number = x - _prevX;
+                var yDelta:Number = y - _prevY;
+                var zDelta:Number = z - _prevZ;
+                _prevX = x;
+                _prevY = y;
+                _prevZ = z;
+                
+                // smoothing with a windowed average
+                var xDeltaAvg:Number = _xAvg.NextValue(xDelta);
+                var yDeltaAvg:Number = _yAvg.NextValue(yDelta);
+                var zDeltaAvg:Number = _zAvg.NextValue(yDelta);
+                //var xDeltaAvg:Number = _xAvg.NextValue(x);
+                //var yDeltaAvg:Number = _yAvg.NextValue(y);
+               
+                if(_xAvg.IsMature() && _yAvg.IsMature())
+                {
+	                // scale
+	                var scalar:Number = 0.5;
+	                xDeltaAvg *= scalar;
+	                yDeltaAvg *= scalar;
+	                zDeltaAvg *= scalar;
+                 
+                    var epsilon:Number = 0.01; 
+                  
+                    var xMin:Number = 4.0;
+                    var xMax:Number = -10.0;
+                    // xDelta left is +4.0
+                    // xDelta right is -10.0
+                    // Map this range to -90 and +90.0.  The output of which is added to the current yaw.
+                    var yaw:Number = linear_map(xDeltaAvg, xMax, xMin, -90.0, 90.0);
+                    var currVd:ViewDirection = viewer.getViewDirection(); 
+                    
+                    // pitch is tricky:
+                    // y travels from -150 through -300 back to -150 depending on pitching forward vs. back
+                    // yDeltaAvg travels from 3 through 5 to 3.
+                    // z reliably tells you if you are pitching forward (closer) vs. pitching back (further away)
+                    // but its absolute value depends on how far away from the kinect you are (obviously).   
+                    
+                    //var pitch:Number = (currVd.pitch);/*(currVd.pitch + yDeltaAvg)*/
+                        
+                    var vd:ViewDirection = new ViewDirection( yaw, currVd.pitch);
+                    if(!isNaN(vd.yaw))
+                       viewer.setViewDirection(vd);
+                        
+                    //trace("[flash] x: "+x+"\txAvg: "+xDeltaAvg+"\tyaw: "+yaw);
+                    //trace("[flash] y: "+y+"\tyAvg: "+yDeltaAvg);
+                    trace("[flash] x: "+Math.round(x*1000)/1000+"\txAvg: "+Math.round(xDeltaAvg*1000)/1000+"\ty: "+Math.round(y*1000)/1000+"\tyAvg: "+Math.round(yDeltaAvg*1000)/1000+"\tz: "+z+"\tzAvg: "+Math.round(zDeltaAvg*1000)/1000);
+                }
+            }
+            else
+                trace("Error splitting data: "+data);
+        }
+        private function linear_map(value:Number, maximum:Number, minimum:Number,
+                                    start_point:Number, end_point:Number):Number
+        {
+            // 0 to maximum
+            //return start_point + (end_point - start_point) * value / maximum;
+            
+            // minimum to maximum
+            return start_point + (end_point - start_point) * (value - minimum) / (maximum - minimum);
+        }
+
+        private function onSocketConnect(event:Event): void
+        {
+            trace("connectHandler: " + event);
+
+        }
+        private function onSocketClose(event:Event): void
+        {
+            trace("closeHandler: " + event);
+        }
+        private function onSocketError(event:IOErrorEvent): void
+        {
+            trace("ioErrorHandler: " + event);
+
+        }
+        public function onResize(event:Event):void
+        {
+	        //  When we get a resize event, set the viewer's size to the size of its container.
+	        //  This is important for apps that aren't fixed size.
+	        viewer.setSize(new Point(event.target.width, event.target.height));
+	        trace("[w x h] "+event.target.width+" x "+event.target.height);
+        }
+        
+        //  onPanoViewerReady is a function that is called when the earthmine viewer has been fully initialized. 
+        public function onPanoViewerReady(event:ViewerEvent):void
+        {	
+	        //  add a compass control 			
+	        viewer.addControl(compass);
+	        
+	        // Berkeley, California - 							  
+            var pano_id:String = "1000001551149";
+	        //viewer.setSubjectLocation(new Location(37.86902555943182, -122.2706301998344), 
+	        //        new ViewDirection(60, 5), onSetSubjectLocationError, 1000);	
+            viewer.setSubjectById(pano_id);
+        }
+        private function onSetSubjectLocationError(ev:ViewerEvent):void
+        {
+            // handy handler if our desired location is outside the earthmine coverage area
+            var dist:Number = GeoMath.distance(new Location(43.607449781,1.4420818919), ev.viewLocation);
+            
+            trace("\tlocation too far away!  Nearest location is "+dist/1000+" km from your desired location!");
+            
+        }
+        //  this function responds to double clicks in the viewer, let's jump to the location returned
+        public function onViewerDoubleClick(event:ViewerMouseEvent):void
+        {
+            
+            // double-click location
+            if(event.viewLocation != null)
+                var geo	:Location = new Location(event.viewLocation.lat, event.viewLocation.lng, event.viewLocation.alt);
+            else
+                return;
+            
+            viewer.setSubjectLocation(geo);
+        }
+        ]]>
+    </mx:Script>
+</mx:Application>

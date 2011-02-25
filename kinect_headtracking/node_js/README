@@ -1,0 +1,3 @@
+get node from nodejs.org
+
+run: ./node socket_server.js
