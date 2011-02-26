@@ -1,0 +1,17 @@
+
+1. Follow the instructions from:
+
+    https://github.com/avin2/SensorKinect
+
+to install the OpenNI binaries, Sensor binaries, the NITE binaries, SDK and Samples
+
+2. Also required is the latest libusb-devel.  Again see instructions from the above
+github url.
+
+3. Other helpful:
+
+    http://www.cleoag.ru/2010/12/10/kinect-OpenNi/
+    http://www.kinect-hacks.com/kinect-hacks
+    https://github.com/OpenNI/OpenNI/tree/unstable
+    https://github.com/PrimeSense/Sensor/tree/unstable
+    http://www.openni.org/downloadfiles/openni-binaries/20-latest-unstable
