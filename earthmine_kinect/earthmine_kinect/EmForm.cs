@@ -23,7 +23,15 @@ namespace earthmine_kinect
 
         private bool _polygonMode = false;
         private List<OverlayVertex> _polyVerts = new List<OverlayVertex>();
-        private Bitmap _texture;
+        private Bitmap _texture1;
+        private Bitmap _texture2;
+        private Earthmine.Overlay.Polygon _poly;
+        // test
+        private bool _toggleTexture = false;
+
+        // Kinect access
+        private KinectProvider _kinectProvider;
+        private KinectConsumer _kinectConsumer;
 
         public EmForm()
         {
@@ -42,10 +50,32 @@ namespace earthmine_kinect
             _emViewer.OnImageLoaderException += new EarthmineViewer.EarthmineEventHandler(onImageLoaderException);
 
             // poly texture
-            _texture = new Bitmap(@"C:\Users\jfinken\Documents\Projects\kinect_lab\earthmine_kinect\earthmine_kinect\wookies.png");
+            _texture1 = new Bitmap(@"C:\Users\josh\projects\kinect_lab\earthmine_kinect\earthmine_kinect\wookies.png");
+            _texture2 = new Bitmap(@"C:\Users\josh\projects\kinect_lab\earthmine_kinect\earthmine_kinect\yeah.jpg");
+          
+
+            //-----------------------------------------------------------------
+            // It's not working out
+            // - I think it's a thread space issue
+            // - consider adding some sort of texture-provider to the Renderer
+            // - or maybe even at this level as a background-worker.
+            // - yes.  derive the kinect-provider from background worker and
+            // set up the call-backs that then re-set the texture.
+            //-----------------------------------------------------------------
+            _kinectProvider = new KinectProvider();
+            _kinectProvider.WorkerReportsProgress = true;
+            _kinectProvider.WorkerSupportsCancellation = true;
+            _kinectProvider.DoWork += 
+                new DoWorkEventHandler(_kinectProvider.GetData);
+            _kinectProvider.ProgressChanged +=
+                new ProgressChangedEventHandler(KinectProvider_ProgressChanged);
+            //_kinectProvider.OnKinectTextureReady += 
+            //    new KinectProvider.EarthmineEventHandler(KinectProvider_OnKinectTextureReady);
+            //_kinectConsumer = new KinectConsumer();
 
             InitializeComponent();
         }
+
         private void onWindowShown(Object sender, EventArgs e)
         {
             // this will set the initial viewport size 
@@ -69,10 +99,45 @@ namespace earthmine_kinect
         }
         private void onResize(object sender, EventArgs e)
         {
-            _emViewer.Resize(this.ClientRectangle.Width, this.ClientRectangle.Height/2);
+            _emViewer.Resize(this.ClientRectangle.Width, this.ClientRectangle.Height);
             _emViewer.GetControl().Location = new Point(0, 0);
         }
-        
+
+        private void KinectProvider_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            _poly.Texture = _kinectProvider.KinectBitmap;
+        }
+
+        private void KinectProvider_OnKinectTextureReady(EarthmineEventArgs info)
+        {
+            // first send the texture to our side window
+            // show the kinect data as well
+            //if (!_kinectConsumer.Visible)
+            //    _kinectConsumer.ShowDialog();
+
+            //_kinectConsumer.KinectBitmap = _kinectProvider.KinectBitmap;
+            if (_poly != null) 
+            {
+                // make a (cropped) copy - the data is locked otherwise
+                //Bitmap texture = (Bitmap)_kinectProvider.KinectBitmap.Clone();
+                //_poly.Texture = _kinectProvider.KinectBitmap;
+                //_poly.Texture = _texture2;
+            }
+        }
+		protected override void OnClosing(CancelEventArgs e)
+		{
+			base.OnClosing(e);
+            if(_kinectConsumer != null)
+                _kinectConsumer.Hide();
+            if (_kinectProvider != null)
+            {
+                //this._kinectProvider.ShouldRun = false;
+                //this._kinectProvider.readerThread.Join();
+
+                // Cancel the asynchronous operation.
+                _kinectProvider.CancelAsync();
+            }
+		}
         private void onViewerReady(EarthmineEventArgs args)
         {
             // LA
@@ -115,9 +180,15 @@ namespace earthmine_kinect
                     {
                         _polygonMode = false;
                         _emViewer.EnableEditMode = false;
-                        Earthmine.Overlay.Polygon poly = new Polygon(_polyVerts);
-                        poly.Texture = _texture;
-                        _emViewer.AddOverlay(poly);
+                        _poly = new Polygon(_polyVerts);
+                        
+                        //_poly.Texture = _texture1;
+                        //_poly.Texture = _kinectProvider.KinectBitmap;
+
+                        // go
+                        _kinectProvider.RunWorkerAsync();
+
+                        _emViewer.AddOverlay(_poly);
                     }
                 }
             }
@@ -141,7 +212,48 @@ namespace earthmine_kinect
             {
                 _emViewer.ClearOverlays();
                 _polyVerts.Clear();
+                // Cancel the kinect texture gen.
+                _kinectProvider.CancelAsync();
             }
+            else if (args.keyArgs.KeyCode == Keys.D1)
+            {
+                // just depth
+                _kinectProvider.textureMode = 
+                    KinectProvider.TextureMode.DEPTH;
+            }
+            else if (args.keyArgs.KeyCode == Keys.D2)
+            {
+                // all rgb
+                _kinectProvider.textureMode =
+                    KinectProvider.TextureMode.RGB;
+            }
+            else if (args.keyArgs.KeyCode == Keys.D3)
+            {
+                // just user rgb: scene analysis
+                _kinectProvider.textureMode =
+                    KinectProvider.TextureMode.RGB_USER_ONLY;
+            }
+            else if (args.keyArgs.KeyCode == Keys.D4)
+            {
+                // user rgb over depth
+                _kinectProvider.textureMode =
+                    KinectProvider.TextureMode.DEPTH_RGB_USER;
+            }
+            /*
+            else if (args.keyArgs.KeyCode == Keys.T)
+            {
+                if (_toggleTexture)
+                {
+                    //_poly.Texture = _texture1;
+                    _toggleTexture = false;
+                }
+                else
+                {
+                    //_poly.Texture = _texture2;
+                    _toggleTexture = true;
+                }
+            }
+             */
         }
     }
 }

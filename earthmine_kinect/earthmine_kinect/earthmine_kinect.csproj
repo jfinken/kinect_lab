@@ -23,6 +23,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <PlatformTarget>x86</PlatformTarget>
@@ -36,6 +37,9 @@
   <ItemGroup>
     <Reference Include="earthmineCore">
       <HintPath>..\..\..\earthmine\dotnet\earthmineCore\bin\Debug\earthmineCore.dll</HintPath>
+    </Reference>
+    <Reference Include="OpenNI.net">
+      <HintPath>..\..\..\..\..\..\Program Files\OpenNI\Bin\OpenNI.net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -54,6 +58,15 @@
     </Compile>
     <Compile Include="EmForm.Designer.cs">
       <DependentUpon>EmForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="KinectConsumer.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="KinectConsumer.Designer.cs">
+      <DependentUpon>KinectConsumer.cs</DependentUpon>
+    </Compile>
+    <Compile Include="KinectProvider.cs">
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
