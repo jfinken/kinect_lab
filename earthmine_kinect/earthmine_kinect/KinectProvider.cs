@@ -7,6 +7,7 @@ using xn;
 using System.Threading;
 using System.Drawing.Imaging;
 using System.Diagnostics;
+using System.Windows.Forms;
 
 using System.ComponentModel;
 
@@ -50,7 +51,17 @@ namespace earthmine_kinect
         //---------------------------------------------------------------------
         public KinectProvider() 
         {
-			this.context = new Context(SAMPLE_XML_FILE);
+            try
+            {
+                this.context = new Context(SAMPLE_XML_FILE);
+            }
+            catch (Exception exp)
+            {
+                MessageBox.Show("Exception: " + exp.Message, "earthmine Kinect", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return;
+            }
+
 			this.depth = context.FindExistingNode(NodeType.Depth) as DepthGenerator;
             this.image = context.FindExistingNode(NodeType.Image) as ImageGenerator;
             //this.scene = context.FindExistingNode(NodeType.Scene) as SceneAnalyzer;
@@ -103,6 +114,12 @@ namespace earthmine_kinect
 				{
 				}
 
+                // if no device connected
+                if (this.depth == null ||
+                    this.image == null)
+                {
+                    return;
+                }
 				this.depth.GetMetaData(depthMD);
                 this.image.GetMetaData(imageMD);
                 // NOTE: interesting to note if this is the same as GetUserPixels

@@ -43,6 +43,7 @@ namespace earthmine_kinect
             _emViewer.SetServiceConfig(apiKey, secretKey, customServiceEndpoint, customTileEndpoint);
             // events and handlers
             _emViewer.OnViewerMouseLeftClick += new EarthmineViewer.EarthmineMouseEventHandler(onMouseLeftClick);
+            _emViewer.OnViewerMouseDoubleClick += new EarthmineViewer.EarthmineMouseEventHandler(onMouseDoubleClick);
             _emViewer.OnViewerReady += new EarthmineViewer.EarthmineEventHandler(onViewerReady);
             _emViewer.OnViewerKeyUp += new EarthmineViewer.EarthmineEventHandler(onKeyUp);
             _emViewer.OnApiServiceException += new EarthmineViewer.EarthmineEventHandler(onApiServiceException);
@@ -193,6 +194,11 @@ namespace earthmine_kinect
                 }
             }
         }
+        private void onMouseDoubleClick(EarthmineEventArgs args)
+        {
+            if (args.location != null)
+                _emViewer.SetSubjectLocation(args.location, null, null);
+        }
         private void onKeyUp(EarthmineEventArgs args)
         {
             if (args.keyArgs.KeyCode == Keys.P)
@@ -229,15 +235,16 @@ namespace earthmine_kinect
             }
             else if (args.keyArgs.KeyCode == Keys.D3)
             {
-                // just user rgb: scene analysis
-                _kinectProvider.textureMode =
-                    KinectProvider.TextureMode.RGB_USER_ONLY;
-            }
-            else if (args.keyArgs.KeyCode == Keys.D4)
-            {
                 // user rgb over depth
                 _kinectProvider.textureMode =
                     KinectProvider.TextureMode.DEPTH_RGB_USER;
+            }
+            else if (args.keyArgs.KeyCode == Keys.D4)
+            {
+
+                // just user rgb: scene analysis
+                _kinectProvider.textureMode =
+                    KinectProvider.TextureMode.RGB_USER_ONLY;
             }
             /*
             else if (args.keyArgs.KeyCode == Keys.T)
