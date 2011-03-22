@@ -19,6 +19,7 @@ namespace earthmine_kinect
     {
         public enum TextureMode 
         {
+            NONE,
             DEPTH,
             RGB,
             RGB_USER_ONLY,

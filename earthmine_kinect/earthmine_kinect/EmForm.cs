@@ -24,7 +24,7 @@ namespace earthmine_kinect
         private bool _polygonMode = false;
         private List<OverlayVertex> _polyVerts = new List<OverlayVertex>();
         //private Bitmap _texture1;
-        //private Bitmap _texture2;
+        private Bitmap _techShop;
         private Earthmine.Overlay.Polygon _poly;
         // test
         private bool _toggleTexture = false;
@@ -51,8 +51,8 @@ namespace earthmine_kinect
             _emViewer.OnImageLoaderException += new EarthmineViewer.EarthmineEventHandler(onImageLoaderException);
 
             // poly texture
+            _techShop = new Bitmap(earthmine_kinect.Properties.Resources.techshop_logo);
             //_texture1 = new Bitmap(@"C:\Users\josh\projects\kinect_lab\earthmine_kinect\earthmine_kinect\wookies.png");
-            //_texture2 = new Bitmap(@"C:\Users\josh\projects\kinect_lab\earthmine_kinect\earthmine_kinect\yeah.jpg");
           
 
             //-----------------------------------------------------------------
@@ -60,15 +60,13 @@ namespace earthmine_kinect
             // set up the call-backs that then re-set the texture.
             //-----------------------------------------------------------------
             _kinectProvider = new KinectProvider();
+            _kinectProvider.textureMode = KinectProvider.TextureMode.NONE;
             _kinectProvider.WorkerReportsProgress = true;
             _kinectProvider.WorkerSupportsCancellation = true;
             _kinectProvider.DoWork += 
                 new DoWorkEventHandler(_kinectProvider.GetData);
             _kinectProvider.ProgressChanged +=
                 new ProgressChangedEventHandler(KinectProvider_ProgressChanged);
-            //_kinectProvider.OnKinectTextureReady += 
-            //    new KinectProvider.EarthmineEventHandler(KinectProvider_OnKinectTextureReady);
-            //_kinectConsumer = new KinectConsumer();
 
             InitializeComponent();
         }
@@ -102,25 +100,10 @@ namespace earthmine_kinect
 
         private void KinectProvider_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
-            _poly.Texture = _kinectProvider.KinectBitmap;
+            if(_kinectProvider.textureMode != KinectProvider.TextureMode.NONE)
+                _poly.Texture = _kinectProvider.KinectBitmap;
         }
 
-        private void KinectProvider_OnKinectTextureReady(EarthmineEventArgs info)
-        {
-            // first send the texture to our side window
-            // show the kinect data as well
-            //if (!_kinectConsumer.Visible)
-            //    _kinectConsumer.ShowDialog();
-
-            //_kinectConsumer.KinectBitmap = _kinectProvider.KinectBitmap;
-            if (_poly != null) 
-            {
-                // make a (cropped) copy - the data is locked otherwise
-                //Bitmap texture = (Bitmap)_kinectProvider.KinectBitmap.Clone();
-                //_poly.Texture = _kinectProvider.KinectBitmap;
-                //_poly.Texture = _texture2;
-            }
-        }
 		protected override void OnClosing(CancelEventArgs e)
 		{
 			base.OnClosing(e);
@@ -143,20 +126,6 @@ namespace earthmine_kinect
             // San Diego
             string pano_id = "1000003067000";
             //string pano_id = "1000003064326";
-
-            // Oregon
-            //string pano_id = "1000003729439";
-
-            // no plane data due to tunnel
-            //string pano_id = "1000001697457";
-
-            // Santa Clara on houston
-            //string pano_id = "1000003043405";
-
-            // aussies
-            //string pano_id = "1000002646235";
-
-            // load by pano id
            
             Earthmine.Util.Logger.Instance.Log(Earthmine.Util.Logger.INFO, 
                 string.Format("Loading pano id: {0}", pano_id));
@@ -178,11 +147,12 @@ namespace earthmine_kinect
                         _polygonMode = false;
                         _emViewer.EnableEditMode = false;
                         _poly = new Polygon(_polyVerts);
-                        
-                        //_poly.Texture = _texture1;
-                        //_poly.Texture = _kinectProvider.KinectBitmap;
 
-                        // go
+                        // load tech shop first
+                        if(_kinectProvider.textureMode == KinectProvider.TextureMode.NONE)
+                            _poly.Texture = _techShop;
+
+                        // but kick of kinect provider
                         _kinectProvider.RunWorkerAsync();
 
                         _emViewer.AddOverlay(_poly);
@@ -219,23 +189,30 @@ namespace earthmine_kinect
             }
             else if (args.keyArgs.KeyCode == Keys.D1)
             {
+                // none, other texture...
+                _kinectProvider.textureMode =
+                    KinectProvider.TextureMode.NONE;
+                _poly.Texture = _techShop;
+            }
+            else if (args.keyArgs.KeyCode == Keys.D2)
+            {
                 // just depth
                 _kinectProvider.textureMode = 
                     KinectProvider.TextureMode.DEPTH;
             }
-            else if (args.keyArgs.KeyCode == Keys.D2)
+            else if (args.keyArgs.KeyCode == Keys.D3)
             {
                 // all rgb
                 _kinectProvider.textureMode =
                     KinectProvider.TextureMode.RGB;
             }
-            else if (args.keyArgs.KeyCode == Keys.D3)
+            else if (args.keyArgs.KeyCode == Keys.D4)
             {
                 // user rgb over depth
                 _kinectProvider.textureMode =
                     KinectProvider.TextureMode.DEPTH_RGB_USER;
             }
-            else if (args.keyArgs.KeyCode == Keys.D4)
+            else if (args.keyArgs.KeyCode == Keys.D5)
             {
 
                 // just user rgb: scene analysis
