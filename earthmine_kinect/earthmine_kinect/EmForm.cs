@@ -23,15 +23,15 @@ namespace earthmine_kinect
 
         private bool _polygonMode = false;
         private List<OverlayVertex> _polyVerts = new List<OverlayVertex>();
-        private Bitmap _texture1;
-        private Bitmap _texture2;
+        //private Bitmap _texture1;
+        //private Bitmap _texture2;
         private Earthmine.Overlay.Polygon _poly;
         // test
         private bool _toggleTexture = false;
 
         // Kinect access
         private KinectProvider _kinectProvider;
-        private KinectConsumer _kinectConsumer;
+        //private KinectConsumer _kinectConsumer;
 
         public EmForm()
         {
@@ -51,16 +51,12 @@ namespace earthmine_kinect
             _emViewer.OnImageLoaderException += new EarthmineViewer.EarthmineEventHandler(onImageLoaderException);
 
             // poly texture
-            _texture1 = new Bitmap(@"C:\Users\josh\projects\kinect_lab\earthmine_kinect\earthmine_kinect\wookies.png");
-            _texture2 = new Bitmap(@"C:\Users\josh\projects\kinect_lab\earthmine_kinect\earthmine_kinect\yeah.jpg");
+            //_texture1 = new Bitmap(@"C:\Users\josh\projects\kinect_lab\earthmine_kinect\earthmine_kinect\wookies.png");
+            //_texture2 = new Bitmap(@"C:\Users\josh\projects\kinect_lab\earthmine_kinect\earthmine_kinect\yeah.jpg");
           
 
             //-----------------------------------------------------------------
-            // It's not working out
-            // - I think it's a thread space issue
-            // - consider adding some sort of texture-provider to the Renderer
-            // - or maybe even at this level as a background-worker.
-            // - yes.  derive the kinect-provider from background worker and
+            // Derive the kinect-provider from background worker and
             // set up the call-backs that then re-set the texture.
             //-----------------------------------------------------------------
             _kinectProvider = new KinectProvider();
@@ -128,8 +124,8 @@ namespace earthmine_kinect
 		protected override void OnClosing(CancelEventArgs e)
 		{
 			base.OnClosing(e);
-            if(_kinectConsumer != null)
-                _kinectConsumer.Hide();
+            //if(_kinectConsumer != null)
+            //    _kinectConsumer.Hide();
             if (_kinectProvider != null)
             {
                 //this._kinectProvider.ShouldRun = false;
